@@ -1,8 +1,15 @@
+import argparse
 import getpass
 import json
+import logging
 import sys
 
 import requests
+
+# Set a custom log formatter
+logging.basicConfig(
+    level=logging.INFO, format="[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+)
 
 headers = {
     'Accept': 'application/json, text/plain, */*',
@@ -40,8 +47,21 @@ def species_config():
                 "\n".join([" : ".join([str(cell) for cell in row]) for row in species_code])
             )
     else:
-        print(f'Failed to get species config with error code: {response.status_code}')
-#species_config()
+        logging.error(f'Failed to get species config with error code: {response.status_code}')
+def species_from_parser(args):
+    species_config()
+
+def stats():
+    response = requests.get('https://critterspot.happywhale.com/v1/cs/main/sitestats', headers=headers)
+    for subsets in response.json()['site']:
+        print(subsets)
+    total_users = response.json()['site']['users']['num']
+    top_contributors = response.json()['site']['users']['topContribs']
+    print(json.dumps(response.json()['site']['encounters']))
+    #print(json.dumps(response.json(),indent=2))
+
+def stats_from_parser(args):
+    stats()
 
 # response = requests.get('https://critterspot.happywhale.com/v1/cs/encounter/full/395867', headers=headers)
 
@@ -77,17 +97,9 @@ def search():
     print(response.status_code)
     for item in response.json():
         print(item)
-search()
+#search()
 
-def stats():
-    response = requests.get('https://critterspot.happywhale.com/v1/cs/main/sitestats', headers=headers)
-    for subsets in response.json()['site']:
-        print(subsets)
-    total_users = response.json()['site']['users']['num']
-    top_contributors = response.json()['site']['users']['topContribs']
-    print(json.dumps(response.json()['site']['encounters']))
-    #print(json.dumps(response.json(),indent=2))
-#stats()
+
 
 def quick_look(look_type):
     look_type_list = {
@@ -152,3 +164,29 @@ def geometry_search():
 
     response = requests.post('https://critterspot.happywhale.com/v1/cs/admin/encounter/search', headers=headers, json=json_data)
 #geometry_search()
+
+def main(args=None):
+    parser = argparse.ArgumentParser(description="Simple CLI for HappyWhale API")
+    subparsers = parser.add_subparsers()
+
+    parser_species = subparsers.add_parser(
+        "species", help="Go to the web based pyaqua readme page"
+    )
+    parser_species.set_defaults(func=species_from_parser)
+
+    parser_stats = subparsers.add_parser(
+        "stats", help="Go to the web based pyaqua readme page"
+    )
+    parser_stats.set_defaults(func=stats_from_parser)
+
+    args = parser.parse_args()
+
+    try:
+        func = args.func
+    except AttributeError:
+        parser.error("too few arguments")
+    func(args)
+
+
+if __name__ == "__main__":
+    main()
