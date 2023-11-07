@@ -16,6 +16,7 @@ setuptools.setup(
         "requests>=2.31.0",
         "pandas>=2.1.2",
         "pipgeo>=0.0.6;platform_system=='Windows'",
+        'geopandas>=0.9.0;platform_system!="Windows"',
         "geojson >= 2.5.0",
     ],
     license="Apache 2.0",

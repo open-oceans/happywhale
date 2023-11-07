@@ -12,7 +12,6 @@ import sys
 from os.path import expanduser
 
 import geojson
-import geopandas as gpd
 import pandas as pd
 import pkg_resources
 import requests
