@@ -146,7 +146,7 @@ def happywhale_version():
         )
 
 
-# happywhale_version()
+happywhale_version()
 
 # Go to the readMe
 def readme():
