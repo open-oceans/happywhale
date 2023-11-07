@@ -129,8 +129,4 @@ nav:
   - Introduction: index.md
   - License: license.md
   - General Installation: installation.md
-  - Site list and Status:
-      - Site list and ID: projects/site-list.md
-  - Site Data:
-      - Daily Data for Site: projects/site-daily.md
   - Changelog: changelog.md

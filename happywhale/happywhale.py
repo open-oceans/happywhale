@@ -1,8 +1,11 @@
 import argparse
+import concurrent.futures
 import datetime
 import getpass
 import json
 import logging
+import os
+import platform
 import re
 import subprocess
 import sys
@@ -19,6 +22,41 @@ from dateutil.relativedelta import *
 logging.basicConfig(
     level=logging.INFO, format="[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
+
+lpath = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(lpath)
+
+headers = {
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Connection": "keep-alive",
+    "Origin": "https://happywhale.com",
+    "Referer": "https://happywhale.com/",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "sec-ch-ua": '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": '"Windows"',
+}
+
+
+class Solution:
+    def compareVersion(self, version1, version2):
+        versions1 = [int(v) for v in version1.split(".")]
+        versions2 = [int(v) for v in version2.split(".")]
+        for i in range(max(len(versions1), len(versions2))):
+            v1 = versions1[i] if i < len(versions1) else 0
+            v2 = versions2[i] if i < len(versions2) else 0
+            if v1 > v2:
+                return 1
+            elif v1 < v2:
+                return -1
+        return 0
+
+
+ob1 = Solution()
 
 if str(platform.system().lower()) == "windows":
     version = sys.version_info[0]
@@ -66,41 +104,6 @@ else:
     except Exception as e:
         logging.exception(e)
 
-lpath = os.path.dirname(os.path.realpath(__file__))
-sys.path.append(lpath)
-
-headers = {
-    "Accept": "application/json, text/plain, */*",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Connection": "keep-alive",
-    "Origin": "https://happywhale.com",
-    "Referer": "https://happywhale.com/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "same-site",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-    "sec-ch-ua": '"Google Chrome";v="119", "Chromium";v="119", "Not?A_Brand";v="24"',
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
-}
-
-
-class Solution:
-    def compareVersion(self, version1, version2):
-        versions1 = [int(v) for v in version1.split(".")]
-        versions2 = [int(v) for v in version2.split(".")]
-        for i in range(max(len(versions1), len(versions2))):
-            v1 = versions1[i] if i < len(versions1) else 0
-            v2 = versions2[i] if i < len(versions2) else 0
-            if v1 > v2:
-                return 1
-            elif v1 < v2:
-                return -1
-        return 0
-
-
-ob1 = Solution()
-
 
 # Get package version
 def version_latest(package):
@@ -146,6 +149,19 @@ def happywhale_version():
 
 # happywhale_version()
 
+# Go to the readMe
+def readme():
+    try:
+        a = webbrowser.open("https://happywhale.openoceans.xyz", new=2)
+        if a == False:
+            print("Your setup does not have a monitor to display the webpage")
+            print(" Go to {}".format("https://happywhale.openoceans.xyz"))
+    except Exception as error:
+        print(error)
+
+
+def read_from_parser(args):
+    readme()
 
 # set credentials
 def auth():
@@ -332,7 +348,6 @@ def stats(stat_type):
                     print(
                         f"Encountered {user[0]} with encounter id {user[3]} in the {user[1]} region, on {user[2]}"
                     )
-
 
 def stats_from_parser(args):
     stats(stat_type=args.st)
@@ -611,9 +626,178 @@ def search_from_parser(args):
     )
 
 
+def shorten_symbols(input_string):
+    # Define a mapping of characters to symbols
+    char_to_symbol = {
+        "0": "A",
+        "1": "B",
+        "2": "C",
+        "3": "D",
+        "4": "E",
+        "5": "F",
+        "6": "G",
+        "7": "H",
+        "8": "I",
+        "9": "J",
+        "a": "K",
+        "b": "L",
+        "c": "M",
+        "d": "N",
+        "e": "O",
+        "f": "P",
+        "-": "Q",
+    }
+
+    shortened_string = "".join(char_to_symbol.get(c, c) for c in input_string)
+    return shortened_string
+
+
+def download_file_with_progress(url, filename):
+    try:
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        if not os.path.exists(filename):
+            with open(filename, "wb") as file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        file.write(chunk)
+            logging.info(f"Downloaded: {filename}")
+        else:
+            logging.info(f"Skipped existing file: {filename}")
+    except Exception as e:
+        print(f"Failed to download {filename}: {e}")
+
+
+def downloader(download_list, output_folder):
+    os.makedirs(output_folder, exist_ok=True)
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for entry in download_list:
+            for filename, url in entry.items():
+                full_path = os.path.join(output_folder, filename)
+                future = executor.submit(download_file_with_progress, url, full_path)
+                futures.append(future)
+        concurrent.futures.wait(futures)
+
+
+def photos_download(geometry_file, start, end, species, export):
+    photo_dict = []
+    species_list = requests.get(
+        "https://critterspot.happywhale.com/v1/cs/encounter/config", headers=headers
+    )
+    if species_list.status_code == 200:
+        species_code = [
+            {item.get("name"): item.get("code")}
+            for item in species_list.json()["species"]
+        ]
+    species_val = species_match(species_code, species)
+    if species_val is not None:
+        species = species_val
+    else:
+        logging.error("Species not found choose from " + "\n")
+        for species in species_code:
+            for key, value in species.items():
+                print(f"{value}")
+        sys.exit()
+    features = []  # to get the features from the search results
+    if start and end is not None:
+        start = datetime.datetime.strptime(start, "%Y-%m-%d")
+        end = datetime.datetime.strptime(end, "%Y-%m-%d")
+    elif start is None and end is not None:
+        end = datetime.datetime.strptime(end, "%Y-%m-%d")
+        start = end + relativedelta(months=-1)
+    elif start is not None and end is None:
+        start = datetime.datetime.strptime(start, "%Y-%m-%d")
+        end = start + relativedelta(months=1)
+    elif start is None and end is None:
+        end = datetime.datetime.utcnow()
+        start = end + relativedelta(months=-1)
+    logging.info(
+        f"Searching between Start date {str(start).split(' ')[0]} and End date {str(end).split(' ')[0]}"
+    )
+    json_data = {
+        "showConnections": False,
+        "encounter": {
+            "species": species,
+            "locsearch": {
+                "type": "mapbounds",
+                "watergeo": None,
+                "mapBounds": {
+                    "southWest": {
+                        "lat": -90,
+                        "lng": -180,
+                    },
+                    "northEast": {
+                        "lat": 90,
+                        "lng": 180,
+                    },
+                },
+            },
+            "datesearch": {
+                "type": 3,
+                "startdate": str(start).split(" ")[0],
+                "enddate": str(end).split(" ")[0],
+            },
+        },
+    }
+    if geometry_file is None:
+        logging.info(f"No geometry file specified using a global bounding box")
+        # json_data['encounter'].pop('locsearch')
+    else:
+        loc_search = geom2bounds(geometry_file)
+        json_data["encounter"]["locsearch"] = loc_search
+    response = requests.post(
+        "https://critterspot.happywhale.com/v1/cs/admin/encounter/search",
+        headers=headers,
+        json=json_data,
+    )
+    if response.status_code == 200:
+        try:
+            logging.info(f"Found a total of {len(response.json())} encounters")
+            for i, json_obj in enumerate(response.json()):
+                try:
+                    properties = {k: v for k, v in json_obj.items() if k != "location"}
+                    object_id = properties.get("id")
+                    object_detail = encounter_full(object_id)
+                    for photo in object_detail["photos"]:
+                        uuid = shorten_symbols(
+                            photo["url"].split("/")[-1].split(".")[0].replace("-", "")
+                        )
+                        img_name = f"IMG_{object_id}_{uuid}_{species.upper()}_{photo.get('licenseLevel')}.{photo['url'].split('/')[-1].split('.')[-1]}"
+                        photo_dict.append({img_name: photo["url"]})
+                    print(
+                        f"Processed {i+1} of {len(response.json())} encounters",
+                        end="\r",
+                    )
+                except Exception as e:
+                    logging.error(f"Subscription error for feature {i}: {e}")
+                    continue
+        except Exception as error:
+            logging.error(f"Encountered error {error}")
+    print("\n" + f"Total image urls {len(photo_dict)}")
+    downloader(photo_dict, export)
+
+
+def download_from_parser(args):
+    photos_download(
+        geometry_file=args.geom,
+        start=args.start,
+        end=args.end,
+        export=args.export,
+        species=args.species,
+    )
+
+
 def main(args=None):
-    parser = argparse.ArgumentParser(description="Simple CLI for HappyWhale API")
+    parser = argparse.ArgumentParser(description="Simple CLI for HappyWhale.com")
     subparsers = parser.add_subparsers()
+    parser_read = subparsers.add_parser(
+        "readme", help="Go to the web based happywhale cli readme page"
+    )
+    parser_read.set_defaults(func=read_from_parser)
+
+    parser_auth = subparsers.add_parser("auth", help="Saves your username and password")
+    parser_auth.set_defaults(func=auth_from_parser)
 
     parser_species = subparsers.add_parser("species", help="Get species list")
     parser_species.set_defaults(func=species_from_parser)
@@ -664,6 +848,35 @@ def main(args=None):
         "--end", help="End date in format YYYY-MM-DD", default=None
     )
     parser_search.set_defaults(func=search_from_parser)
+
+    parser_download = subparsers.add_parser(
+        "download", help="Download images from search results (Default: Global 1 month)"
+    )
+    required_named = parser_download.add_argument_group("Required named arguments.")
+    required_named.add_argument(
+        "--export",
+        help="Full path to export folder to download images",
+        required=True,
+    )
+    required_named.add_argument(
+        "--species",
+        help="Species name or keyword for example Humpback Whale or humpback_whale",
+        required=True,
+        default=None,
+    )
+    optional_named = parser_download.add_argument_group("Optional named arguments")
+    optional_named.add_argument(
+        "--geom",
+        help="Input geometry file in geojson format defaults to Global",
+        default=None,
+    )
+    optional_named.add_argument(
+        "--start", help="Start date in format YYYY-MM-DD", default=None
+    )
+    optional_named.add_argument(
+        "--end", help="End date in format YYYY-MM-DD", default=None
+    )
+    parser_download.set_defaults(func=download_from_parser)
 
     args = parser.parse_args()
 

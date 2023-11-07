@@ -33,7 +33,7 @@ setuptools.setup(
     ],
     author="Samapriya Roy",
     author_email="samapriya.roy@gmail.com",
-    description="Simple CLI for HappyWhale API",
+    description="Simple CLI for HappyWhale.com",
     entry_points={
         "console_scripts": [
             "happywhale=happywhale.happywhale:main",
