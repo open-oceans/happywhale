@@ -4,19 +4,70 @@ import getpass
 import json
 import logging
 import re
+import subprocess
 import sys
+from os.path import expanduser
 
 import geojson
 import geopandas as gpd
 import pandas as pd
+import pkg_resources
 import requests
 from dateutil.relativedelta import *
-from tabulate import tabulate
 
 # Set a custom log formatter
 logging.basicConfig(
     level=logging.INFO, format="[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
 )
+
+if str(platform.system().lower()) == "windows":
+    version = sys.version_info[0]
+    try:
+        import pipgeo
+
+        response = requests.get("https://pypi.org/pypi/pipgeo/json")
+        latest_version = response.json()["info"]["version"]
+        vcheck = ob1.compareVersion(
+            latest_version,
+            pkg_resources.get_distribution("pipgeo").version,
+        )
+        if vcheck == 1:
+            subprocess.call(
+                f"{sys.executable}" + " -m pip install pipgeo --upgrade", shell=True
+            )
+    except ImportError:
+        subprocess.call(f"{sys.executable}" + " -m pip install pipgeo", shell=True)
+    except Exception as e:
+        logging.exception(e)
+    try:
+        import gdal
+    except ImportError:
+        try:
+            from osgeo import gdal
+        except ModuleNotFoundError:
+            subprocess.call("pipgeo sys", shell=True)
+    except ModuleNotFoundError or ImportError:
+        subprocess.call("pipgeo sys", shell=True)
+    except Exception as e:
+        logging.exception(e)
+    try:
+        import geopandas as gpd
+    except ImportError:
+        subprocess.call(f"{sys.executable}" + " -m pip install geopandas", shell=True)
+        import geopandas as gpd
+    except Exception as e:
+        logging.exception(e)
+else:
+    try:
+        import geopandas as gpd
+    except ImportError:
+        subprocess.call(f"{sys.executable}" + " -m pip install geopandas", shell=True)
+        import geopandas as gpd
+    except Exception as e:
+        logging.exception(e)
+
+lpath = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(lpath)
 
 headers = {
     "Accept": "application/json, text/plain, */*",
@@ -34,10 +85,104 @@ headers = {
 }
 
 
+class Solution:
+    def compareVersion(self, version1, version2):
+        versions1 = [int(v) for v in version1.split(".")]
+        versions2 = [int(v) for v in version2.split(".")]
+        for i in range(max(len(versions1), len(versions2))):
+            v1 = versions1[i] if i < len(versions1) else 0
+            v2 = versions2[i] if i < len(versions2) else 0
+            if v1 > v2:
+                return 1
+            elif v1 < v2:
+                return -1
+        return 0
+
+
+ob1 = Solution()
+
+
+# Get package version
+def version_latest(package):
+    response = requests.get(f"https://pypi.org/pypi/{package}/json")
+    latest_version = response.json()["info"]["version"]
+    return latest_version
+
+
+def happywhale_version():
+    vcheck = ob1.compareVersion(
+        version_latest("happywhale"),
+        pkg_resources.get_distribution("happywhale").version,
+    )
+    if vcheck == 1:
+        print(
+            "\n"
+            + "========================================================================="
+        )
+        print(
+            "Current version of happywhale is {} upgrade to lastest version: {}".format(
+                pkg_resources.get_distribution("happywhale").version,
+                version_latest("happywhale"),
+            )
+        )
+        print(
+            "========================================================================="
+        )
+    elif vcheck == -1:
+        print(
+            "\n"
+            + "========================================================================="
+        )
+        print(
+            "Possibly running staging code {} compared to pypi release {}".format(
+                pkg_resources.get_distribution("happywhale").version,
+                version_latest("happywhale"),
+            )
+        )
+        print(
+            "========================================================================="
+        )
+
+
+# happywhale_version()
+
+
+# set credentials
 def auth():
+    home = expanduser("~/hwhale.json")
+    usr = input("Enter email: ")
+    pwd = getpass.getpass("Enter password: ")
+    while len(pwd) == 0:
+        logging.error("Password cannot be empty")
+        pwd = getpass.getpass("Enter password: ")
+    data = {"email": usr, "password": pwd}
+    with open(home, "w") as outfile:
+        json.dump(data, outfile)
+
+
+def auth_from_parser(args):
+    auth()
+
+
+def fetch_cookies():
+    try:
+        home = expanduser("~/hwhale.json")
+        with open(home) as json_file:
+            data = json.load(json_file)
+            if not data.get("email"):
+                email = input("Enter username: ")
+            else:
+                email = data.get("email")
+            if not data.get("password"):
+                password = getpass.getpass("Enter password: ")
+            else:
+                password = data.get("password")
+    except Exception as e:
+        print(e)
+
     json_data = {
-        "username": "roysam@hawaii.edu",
-        "password": "ydg9bpd3AGD9zmy.fdq",
+        "username": email,
+        "password": password,
         "rememberMe": True,
     }
 
@@ -46,15 +191,18 @@ def auth():
         headers=headers,
         json=json_data,
     )
-    print(json.dumos(response.json()))
-
-
-# auth()
+    if response.status_code == 200:
+        cookies = response.cookies.get_dict()
+        return cookies
+    else:
+        print(f"Fetching cookies with response code {response.status_code}")
 
 
 def species_config():
     response = requests.get(
-        "https://critterspot.happywhale.com/v1/cs/encounter/config", headers=headers
+        "https://critterspot.happywhale.com/v1/cs/encounter/config",
+        headers=headers,
+        cookies=fetch_cookies(),
     )
     if response.status_code == 200:
         species_code = [
@@ -80,7 +228,9 @@ def species_from_parser(args):
 
 def stats(stat_type):
     response = requests.get(
-        "https://critterspot.happywhale.com/v1/cs/main/sitestats", headers=headers
+        "https://critterspot.happywhale.com/v1/cs/main/sitestats",
+        headers=headers,
+        cookies=fetch_cookies(),
     )
     if response.status_code == 200:
         # total photos
@@ -190,7 +340,9 @@ def stats_from_parser(args):
 
 def id_fetch(id):
     response = requests.get(
-        f"https://critterspot.happywhale.com/v1/cs/encounter/full/{id}", headers=headers
+        f"https://critterspot.happywhale.com/v1/cs/encounter/full/{id}",
+        headers=headers,
+        cookies=fetch_cookies(),
     )
     if response.status_code == 200:
         print(json.dumps(response.json(), indent=2))
@@ -202,35 +354,6 @@ def id_fetch(id):
 
 def fetch_from_parser(args):
     id_fetch(id=args.id)
-
-
-def search():
-    json_data = {
-        "encounter": {
-            "datesearch": {
-                "preset": 2,
-                "type": 4,
-                "startdate": "2010-10-01",
-                "enddate": "2023-11-01",
-            },
-            "species": "humpback_whale",
-        },
-        "showConnections": False,
-    }
-
-    response = requests.post(
-        "https://critterspot.happywhale.com/v1/cs/admin/encounter/search",
-        headers=headers,
-        json=json_data,
-    )
-    print(len(response.json()))
-    print(response.status_code)
-
-    # for item in response.json():
-    #     print(item)
-
-
-# search()
 
 
 def geom2bounds(geom):
@@ -272,6 +395,19 @@ def species_match(list_of_dicts, search_string):
     return None  # Return None if no match is found
 
 
+def encounter_full(id):
+    response = requests.get(
+        f"https://critterspot.happywhale.com/v1/cs/encounter/full/{id}", headers=headers
+    )
+    if response.status_code == 200:
+        final_response = response.json()
+        return final_response
+    else:
+        print(
+            f"Request failed with {response.status_code} and error message {response.text}"
+        )
+
+
 def geometry_search(geometry_file, start, end, export, species):
     species_list = requests.get(
         "https://critterspot.happywhale.com/v1/cs/encounter/config", headers=headers
@@ -304,7 +440,9 @@ def geometry_search(geometry_file, start, end, export, species):
     elif start is None and end is None:
         end = datetime.datetime.utcnow()
         start = end + relativedelta(months=-1)
-    logging.info(f"Searching between Start date {start} and End date {end}")
+    logging.info(
+        f"Searching between Start date {str(start).split(' ')[0]} and End date {str(end).split(' ')[0]}"
+    )
     json_data = {
         "showConnections": False,
         "encounter": {
@@ -349,16 +487,34 @@ def geometry_search(geometry_file, start, end, export, species):
                     # Extract location and other properties
                     location = json_obj["location"]
                     properties = {k: v for k, v in json_obj.items() if k != "location"}
+                    properties.pop("individual")
                     # properties["displayImg"] = properties.pop("displayImage")
                     properties["system:time_start"] = epoch_start(
                         properties["dateRange"]["startDate"]
                     )
+                    object_id = properties.get("id")
+                    object_detail = encounter_full(object_id)
+                    accuracy = object_detail["encounter"]["location"].get("accuracy")
+                    precision = object_detail["encounter"]["location"].get(
+                        "precisionSource"
+                    )
+                    license = object_detail["encounter"]["displayImage"]["licenseLevel"]
+                    if accuracy is not None:
+                        properties["accuracy"] = accuracy
+                    if precision is not None:
+                        properties["precision"] = precision
+                    if license is not None:
+                        properties["license"] = license
                     # Create a Feature
                     feature = geojson.Feature(
                         geometry=geojson.Point((location["lng"], location["lat"])),
                         properties=properties,
                     )
                     features.append(feature)
+                    print(
+                        f"Processed {i+1} of {len(response.json())} encounters",
+                        end="\r",
+                    )
                 except Exception as e:
                     logging.error(f"Subscription error for feature {i}: {e}")
                     continue
@@ -366,7 +522,7 @@ def geometry_search(geometry_file, start, end, export, species):
             geojson_data = geojson.dumps(feature_collection, sort_keys=True, indent=2)
             # print(geojson_data)
             if export.endswith("geojson"):
-                with open(export, "w") as geojson_file:
+                with open(export, "w", encoding="utf-8") as geojson_file:
                     geojson_file.write(geojson_data)
                 logging.info(f"Search results exported to {export}")
             elif export.endswith("csv"):
@@ -407,8 +563,10 @@ def geometry_search(geometry_file, start, end, export, species):
                             .get("displayImage", {})
                             .get("url"),
                             "id": feature.get("properties", {}).get("id"),
-                            "individual": feature.get("properties", {}).get(
-                                "individual"
+                            "accuracy": feature.get("properties", {}).get("accuracy"),
+                            "precision": feature.get("properties", {}).get("precision"),
+                            "displayImgLicense": feature.get("properties", {}).get(
+                                "license"
                             ),
                             "maxCount": feature.get("properties", {}).get("maxCount"),
                             "minCount": feature.get("properties", {}).get("minCount"),
@@ -457,19 +615,26 @@ def main(args=None):
     parser = argparse.ArgumentParser(description="Simple CLI for HappyWhale API")
     subparsers = parser.add_subparsers()
 
-    parser_species = subparsers.add_parser(
-        "species", help="Go to the web based pyaqua readme page"
-    )
+    parser_species = subparsers.add_parser("species", help="Get species list")
     parser_species.set_defaults(func=species_from_parser)
 
-    parser_stats = subparsers.add_parser(
-        "stats", help="Go to the web based pyaqua readme page"
-    )
+    parser_stats = subparsers.add_parser("stats", help="Go site stats for happywhale")
     optional_named = parser_stats.add_argument_group("Optional named arguments")
     optional_named.add_argument(
         "--st", help="Stats type encounters|users|individuals", default=None
     )
     parser_stats.set_defaults(func=stats_from_parser)
+
+    parser_fetch = subparsers.add_parser(
+        "fetch", help="Fetch details on an encounter based on encounter id"
+    )
+    required_named = parser_fetch.add_argument_group("Required named arguments.")
+    required_named.add_argument(
+        "--id",
+        help="Encounter id to fetch",
+        required=True,
+    )
+    parser_fetch.set_defaults(func=fetch_from_parser)
 
     parser_search = subparsers.add_parser(
         "search", help="Search and export results (Default: Global 1 month)"
