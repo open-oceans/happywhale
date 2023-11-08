@@ -173,7 +173,20 @@ def auth():
     data = {"email": usr, "password": pwd}
     with open(home, "w") as outfile:
         json.dump(data, outfile)
-
+    json_data = {
+        "username": usr,
+        "password": pwd,
+        "rememberMe": True,
+    }
+    response = requests.post(
+        "https://critterspot.happywhale.com/v1/core/user/login",
+        headers=headers,
+        json=json_data,
+    )
+    if response.status_code == 200:
+        logging.info("Logged in successfully")
+    else:
+        logging.error(f"Failed to login try again")
 
 def auth_from_parser(args):
     auth()

@@ -129,4 +129,13 @@ nav:
   - Introduction: index.md
   - License: license.md
   - General Installation: installation.md
+  - Setup tools:
+      - Authenticate: projects/auth.md
+  - Quick Checks:
+      - Database stats: projects/stats.md
+      - Species list: projects/species.md
+  - Search & Download:
+      - Fetch encounter info: projects/fetch.md
+      - Search and export: projects/search-export.md
+      - Download images: projects/download.md
   - Changelog: changelog.md
