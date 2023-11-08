@@ -1,8 +1,13 @@
 # Simple CLI for Happywhale
+
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=plastic&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/samapriya/)
 [![Medium](https://img.shields.io/badge/Medium-12100E?style=flat&logo=medium&logoColor=white)](https://medium.com/@samapriyaroy)
 [![Twitter URL](https://img.shields.io/twitter/follow/samapriyaroy?style=social)](https://twitter.com/intent/follow?screen_name=samapriyaroy)
 [![Mastodon Follow](https://img.shields.io/mastodon/follow/109627075086849826?domain=https%3A%2F%2Fmapstodon.space%2F)](https://mapstodon.space/@samapriya)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10081817.svg)](https://doi.org/10.5281/zenodo.10081817)
+[![CI happywhale](https://github.com/open-oceans/happywhale/actions/workflows/package_ci.yml/badge.svg)](https://github.com/open-oceans/happywhale/actions/workflows/package_ci.yml)
+[![Hits-of-Code](https://hitsofcode.com/github/open-oceans/happywhale?branch=main)](https://hitsofcode.com/github/open-oceans/happywhale?branch=main)
+[![PyPI version](https://badge.fury.io/py/happywhale.svg)](https://badge.fury.io/py/happywhale)
 [![Donate](https://img.shields.io/badge/Donate-Buy%20me%20a%20Coffee-teal)](https://www.buymeacoffee.com/samapriya)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/samapriya)
 [![Donate](https://img.shields.io/badge/Donate-Buy%20me%20a%20Chai-teal)](https://www.buymeacoffee.com/samapriya)
@@ -32,4 +37,13 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
+```
+
+#### Citation
+
+You can cite the tool too
+
+```
+Samapriya Roy. (2023). open-oceans/happywhale: Simple CLI for Happywhales.com API (0.0.2).
+Zenodo. https://doi.org/10.5281/zenodo.10081817
 ```
