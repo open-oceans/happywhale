@@ -11,7 +11,6 @@
 [![Donate](https://img.shields.io/badge/Donate-Buy%20me%20a%20Coffee-teal)](https://www.buymeacoffee.com/samapriya)
 [![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/samapriya)
 [![Donate](https://img.shields.io/badge/Donate-Buy%20me%20a%20Chai-teal)](https://www.buymeacoffee.com/samapriya)
-[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/samapriya)
 
 [Happywhale is a global citizen science project](https://happywhale.com) dedicated to whale and dolphin research and conservation. The user-friendly Happywhale app allows anyone to share photos of encounters with these marine mammals, which are then processed by a team of scientists and volunteers using advanced image recognition algorithms. Identified individuals are tracked over time and across locations, yielding valuable insights into their behavior and aiding  in the preservation of critical habitats.
 
