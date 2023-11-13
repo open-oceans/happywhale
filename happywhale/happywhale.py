@@ -9,6 +9,7 @@ import platform
 import re
 import subprocess
 import sys
+import webbrowser
 from os.path import expanduser
 
 import geojson
